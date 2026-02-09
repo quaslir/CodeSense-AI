@@ -5,6 +5,9 @@ const GoogleAI = require("@google/generative-ai");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const Groq = require("groq-sdk");
+const debug_1 = require("./debug");
+const explain_1 = require("./explain");
+const optimize_1 = require("./optimize");
 const app = express();
 dotenv.config();
 app.use(express.json());
@@ -14,16 +17,20 @@ const GeminiLLM = process.env.GEMINI_KEY;
 const gemini = new GoogleAI.GoogleGenerativeAI(GeminiLLM);
 app.post("/analyze", async (req, res) => {
     console.log("STARTING ANALAZYING....");
-    const { input } = req.body;
+    const { input, model } = req.body;
+    const systemPrompt = model == 0 ? explain_1.EXPLAIN_PROMPT : model == 1 ? debug_1.DEBUG_PROMPT : optimize_1.OPTIMIZE_PROMPT;
     if (!input)
         return res.status(400).json({ message: "Message is empty" });
-    console.log("⚠️ Gemini down, switching to Groq (Llama 3)...");
     try {
         const chatCompletion = await groq.chat.completions.create({
             "messages": [
                 {
+                    "role": "system",
+                    "content": systemPrompt
+                },
+                {
                     "role": "user",
-                    "content": input
+                    content: `My cod is \n\n${input}`
                 }
             ],
             "model": "llama-3.1-8b-instant",
@@ -37,15 +44,8 @@ app.post("/analyze", async (req, res) => {
         return res.json({ reply: reply });
     }
     catch (error) {
-        try {
-            const modelGemini = gemini.getGenerativeModel({ model: "gemini-3-flash-preview" });
-            const response = await modelGemini.generateContent(input);
-            const data = await response.response;
-            return res.json({ reply: data.text() });
-        }
-        catch (error) {
-            res.send(error);
-        }
+        console.error("All LLMs are down, error: ", error);
+        return res.send("All LLMs are down");
     }
 });
 app.listen(3000, () => console.log("Server is working on 3000 port"));

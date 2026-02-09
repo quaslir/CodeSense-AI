@@ -17,7 +17,7 @@ export default function App() {
 const [input, setInput] = useState<string>("");
 const [response, setResponse] = useState<string>("");
 const [isLoading, setIsLoading] = useState<boolean>(false);
-async function send() {
+async function send(model:number) {
   console.log("teST");
   setIsLoading(true);
   setResponse("");
@@ -25,7 +25,7 @@ try {
   const res = await fetch("http://localhost:3000/analyze", {
     method: 'POST',
     headers: {'Content-Type' : 'application/json'},
-    body: JSON.stringify({input})
+    body: JSON.stringify({input, model})
   });
   const data = await res.json();
   console.log(data.reply || "Errror");
@@ -46,21 +46,21 @@ finally {
           <Cpu size={24} />
         </div>
         <button 
-          onClick={() => send()} 
+          onClick={() => send(0)} 
           disabled={isLoading}
           className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Explain'"
         >
           <MessageSquareCode size={20} className="text-blue-400" />
         </button>
         <button 
-          onClick={() => send()} 
+          onClick={() => send(1)} 
           disabled={isLoading}
           className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Debug'"
         >
           <Bug size={20} className="text-red-400" />
         </button>
         <button 
-          onClick={() => send()} 
+          onClick={() => send(2)} 
           disabled={isLoading}
           className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Optimize'"
         >

@@ -3,6 +3,10 @@ import GoogleAI = require("@google/generative-ai");
 import dotenv = require("dotenv");
 import cors = require("cors");
 import Groq = require("groq-sdk");
+import { DEBUG_PROMPT } from "./debug";
+import { EXPLAIN_PROMPT } from "./explain";
+import { OPTIMIZE_PROMPT } from "./optimize";
+
 const app = express();
 dotenv.config();
 app.use(express.json());
@@ -13,23 +17,20 @@ const gemini = new GoogleAI.GoogleGenerativeAI(GeminiLLM);
 
 app.post("/analyze", async (req, res) => {
     console.log("STARTING ANALAZYING....");
-    const { input } = req.body;
+    const { input, model } = req.body;
+    const systemPrompt:string = model == 0 ? EXPLAIN_PROMPT : model == 1 ? DEBUG_PROMPT : OPTIMIZE_PROMPT;
     if (!input) return res.status(400).json({ message: "Message is empty" });
-    try {
-        const modelGemini = gemini.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-        const response = await modelGemini.generateContent(input);
-
-        const data = await response.response;
-        return res.json({reply: data.text()});
-    } catch (error) {
-        console.log("⚠️ Gemini down, switching to Groq (Llama 3)...");
         try {
             const chatCompletion = await groq.chat.completions.create({
                 "messages": [
                     {
-                        "role": "user",
-                        "content": input
+                        "role": "system",
+                        "content": systemPrompt
+                    },
+                    {
+                    "role" : "user",
+                    content: `My cod is \n\n${input}`
                     }
                 ],
                 "model": "llama-3.1-8b-instant",
@@ -47,7 +48,6 @@ app.post("/analyze", async (req, res) => {
             console.error("All LLMs are down, error: ", error);
             return res.send("All LLMs are down");
         }
-    }
 });
 
 
