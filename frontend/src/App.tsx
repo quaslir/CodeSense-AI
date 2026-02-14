@@ -14,11 +14,10 @@ import {
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 export default function App() {
-const [input, setInput] = useState<string>("");
+const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
 const [response, setResponse] = useState<string>("");
 const [isLoading, setIsLoading] = useState<boolean>(false);
 async function send(model:number) {
-  console.log("teST");
   setIsLoading(true);
   setResponse("");
 try {
@@ -28,7 +27,7 @@ try {
     body: JSON.stringify({input, model})
   });
   const data = await res.json();
-  console.log(data.reply || "Errror");
+  setResponse(data.reply);
 }
 catch(error) {
   console.error(error);
@@ -37,6 +36,10 @@ finally {
   setIsLoading(false);
 }
 }
+
+useEffect(() => {
+  localStorage.setItem("saved_code", input);
+}, [input]);
  return (
     <div className="flex h-screen w-full bg-[#0D1117] text-gray-300 font-sans">
       
@@ -103,29 +106,54 @@ finally {
           </div>
 
           {/* AI Panel */}
-          <section className="w-[450px] bg-[#0D1117] flex flex-col">
-            <div className="p-3 border-b border-gray-800 bg-[#161B22] flex items-center gap-2 text-sm font-bold">
-              <ChevronRight size={16} className={`text-blue-500 ${isLoading ? 'animate-pulse' : ''}`} />
-              AI Insights
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-5">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
-                  <Loader2 className="animate-spin text-blue-500" size={32} />
-                  <p className="text-xs uppercase tracking-widest animate-pulse">Analyzing Code...</p>
-                </div>
-              ) : response ? (
-                <div className="prose prose-invert prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-800">
-                  <ReactMarkdown>{response}</ReactMarkdown>
-                </div>
-              ) : (
-                <div className="text-gray-600 text-sm italic text-center mt-20 px-10">
-                  Select an action from the sidebar to analyze your logic.
-                </div>
-              )}
-            </div>
-          </section>
+<section className="w-[450px] bg-[#0D1117] border-l border-gray-800 flex flex-col">
+  <div className="p-3 border-b border-gray-800 bg-[#161B22] flex items-center gap-2 text-sm font-bold">
+    <ChevronRight size={16} className={`text-blue-500 ${isLoading ? 'animate-pulse' : ''}`} />
+    AI Insights
+  </div>
+
+  <div className="flex-1 overflow-y-auto p-5">
+    {isLoading ? (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-500">
+        <Loader2 className="animate-spin text-blue-500" size={32} />
+        <p className="text-xs uppercase tracking-widest animate-pulse">Analyzing Code...</p>
+      </div>
+    ) : response ? (
+      <div className="prose prose-invert prose-sm max-w-none">
+        <ReactMarkdown
+          components={{
+            code({ node, inline, className, children, ...props }: any) {
+              return (
+                <code 
+                  className={`${className} bg-gray-800 px-1 rounded text-red-400`} 
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            },
+            pre({ children }) {
+              return (
+                <pre className="bg-[#161B22] border border-gray-800 rounded-lg p-4 overflow-x-auto my-4">
+                  {children}
+                </pre>
+              );
+            }
+          }}
+        >
+          {response}
+        </ReactMarkdown>
+      </div>
+    ) : (
+      <div className="flex flex-col items-center justify-center h-full opacity-30">
+        <Cpu size={48} className="mb-4" />
+        <p className="text-sm italic text-center px-10">
+          Select an action to start analysis
+        </p>
+      </div>
+    )}
+  </div>
+</section>
 
         </div>
       </main>
