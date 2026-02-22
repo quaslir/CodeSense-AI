@@ -14,6 +14,8 @@ import {
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import TerminalWindow from "./Terminal";
+import rehypeHighlight from "rehype-highlight";
+import 'highlight.js/styles/atom-one-dark.css'
 export default function App() {
 const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
 const [response, setResponse] = useState<string>("");
@@ -133,8 +135,7 @@ useEffect(() => {
 
 </div>
 
-          {/* AI Panel */}
-<section className="w-[450px] bg-[#0D1117] border-l border-gray-800 flex flex-col">
+          <section className="w-[450px] bg-[#0D1117] border-l border-gray-800 flex flex-col">
   <div className="p-3 border-b border-gray-800 bg-[#161B22] flex items-center gap-2 text-sm font-bold">
     <ChevronRight size={16} className={`text-blue-500 ${isLoading ? 'animate-pulse' : ''}`} />
     AI Insights
@@ -148,36 +149,34 @@ useEffect(() => {
       </div>
     ) : response ? (
       <div className="prose prose-invert prose-sm max-w-none">
-        <ReactMarkdown
+        <ReactMarkdown 
+          rehypePlugins={[rehypeHighlight]} 
           components={{
-            code({ node, inline, className, children, ...props }: any) {
-              return (
-                <code 
-                  className={`${className} bg-gray-800 px-1 rounded text-red-400`} 
-                  {...props}
-                >
-                  {children}
-                </code>
-              );
-            },
             pre({ children }) {
               return (
-                <pre className="bg-[#161B22] border border-gray-800 rounded-lg p-4 overflow-x-auto my-4">
+                <pre className="rounded-lg p-0 overflow-hidden my-4 border border-gray-800">
                   {children}
                 </pre>
+              );
+            },
+            code({ className, children }) {
+              // Если это блок кода (есть класс), highlight.js всё раскрасит сам
+              return (
+                <code className={`${className} px-1 rounded`}>
+                  {children}
+                </code>
               );
             }
           }}
         >
-          {response}
+          {response.trim().startsWith('```') ? response : `\`\`\`cpp\n${response}\n\`\`\``}
         </ReactMarkdown>
       </div>
     ) : (
+
       <div className="flex flex-col items-center justify-center h-full opacity-30">
         <Cpu size={48} className="mb-4" />
-        <p className="text-sm italic text-center px-10">
-          Select an action to start analysis
-        </p>
+        <p className="text-sm italic text-center px-10">Select an action to start analysis</p>
       </div>
     )}
   </div>

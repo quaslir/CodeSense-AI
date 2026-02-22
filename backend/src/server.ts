@@ -58,20 +58,23 @@ interface Compile {
     code : string,
     lang: number
 };
+const decodeBase64 = (data:string | null) => {
+    if(!data) return null;
+    return Buffer.from(data, 'base64').toString('utf-8');
+};
 
 app.post("/api/compile", async(req, res) => {
 const {code, lang} = req.body;
 if(!code || !lang) return res.status(400);
-
 const options = {
     method: 'POST',
     url: 'https://judge0-ce.p.rapidapi.com/submissions',
     data: {
-    source_code: code,
+    source_code: Buffer.from(code).toString('base64'),
     language_id: lang
     },
     params: {
-        base64_encoded: false,
+        base64_encoded: 'true',
         wait: 'true'
     },
     headers: {
@@ -84,7 +87,11 @@ const options = {
 
 try {
     const response = await axios.request(options);
-    return res.json({output: response.data.stdout, error: response.data.stderr})
+    const data = response.data;
+    const cleanError = decodeBase64(data.compile_output || data.stderr);
+    const cleanOutput = decodeBase64(data.stdout);
+    console.log(cleanError);    
+    return res.json({output: cleanOutput, error: cleanError})
 } catch(error) {
     console.error(error);
 }
