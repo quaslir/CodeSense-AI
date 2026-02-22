@@ -2,12 +2,8 @@ import { useState } from "react"
 import { useEffect } from "react"
 import { Editor } from "@monaco-editor/react";
 import { 
+  ChevronRight
 
-  Bug, 
-  Zap, 
-  MessageSquareCode, 
-  ChevronRight, 
-  Cpu
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -18,6 +14,7 @@ import 'highlight.js/styles/atom-one-dark.css'
 import Header from "./Header";
 import Content from "./Content";
 import Slidebar from "./Slidebar";
+import Settings from "./Settings";
 export default function App() {
 const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
 const [response, setResponse] = useState<string>("");
@@ -25,17 +22,23 @@ const [isLoading, setIsLoading] = useState<boolean>(false);
 const [output, setOutput] = useState<string>("");
 const [error, setError] = useState<string>("");
 const [selectedLang, setSelectedLang] = useState<Language>(availableLanguages[0]);
-
+const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+interface Settings {
+  autocomplete:boolean,
+  model: string
+};
+const [settings, setSettings] = useState<Settings>(
+  {autocomplete: JSON.parse(localStorage.getItem("settings_auto") || "true"),
+  model: localStorage.getItem("settings_model") || "Llama-3-70b"
+})
 async function send(model:number) {
   setIsLoading(true);
   setResponse("");
 try {
-  const res = await fetch("http://localhost:3000/analyze", {
-    method: 'POST',
-    headers: {'Content-Type' : 'application/json'},
-    body: JSON.stringify({input, model})
-  });
-  const data = await res.json();
+  const res = await axios.post("http://localhost:3000/analyze", {
+    input, model
+  })
+  const data = await res.data;
   setResponse(data.reply);
 }
 catch(error) {
@@ -72,12 +75,21 @@ useEffect(() => {
   localStorage.setItem("saved_code", input);
 
 }, [input]);
+
+const updateSettings = (newSettings:Settings) => {
+  setSettings(prev => {
+    const updated = {...prev, ...newSettings};
+  localStorage.setItem("settings_auto", JSON.stringify(updated.autocomplete));
+  localStorage.setItem("settings_model", updated.model);
+    return updated;
+  });
+}
  return (
     <div className="flex h-screen w-full bg-[#0D1117] text-gray-300 font-sans">
       
       {/* --- Sidebar --- */}
 
-  <Slidebar isLoading={isLoading} onSend={send} />
+  <Slidebar isLoading={isLoading} onSend={send} onSetIsSettingsOpen={setIsSettingsOpen}/>
       {/* --- Main Area --- */}
       <main className="flex-1 flex flex-col overflow-hidden">
         
@@ -133,6 +145,13 @@ useEffect(() => {
         </div>
     
       </main>
+
+      <Settings 
+    isOpen={isSettingsOpen} 
+    onClose={() => setIsSettingsOpen(false)} 
+    settings={settings} 
+    updateSettings={updateSettings} 
+  />
     </div>
   );
 }
