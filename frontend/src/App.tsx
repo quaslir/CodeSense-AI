@@ -13,10 +13,13 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import TerminalWindow from "./Terminal";
 export default function App() {
 const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
 const [response, setResponse] = useState<string>("");
 const [isLoading, setIsLoading] = useState<boolean>(false);
+const [output, setOutput] = useState<string>("");
+const [error, setError] = useState<string>("");
 async function send(model:number) {
   setIsLoading(true);
   setResponse("");
@@ -36,6 +39,24 @@ finally {
   setIsLoading(false);
 }
 }
+
+async function runCode(lang: number) {
+  setOutput("");
+  setError("");
+  const code = input;
+  try {
+
+    const res = await axios.post("http://localhost:3000/api/compile", {
+      code, lang
+    });
+    const data = res.data;
+    setOutput(data.output);
+    setError(data.error);
+  } catch(error) {
+    console.error(error);
+  }
+}
+
 
 useEffect(() => {
   localStorage.setItem("saved_code", input);
@@ -79,7 +100,8 @@ useEffect(() => {
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-gray-500">
             <Terminal size={14} /> main.cpp
           </div>
-          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs transition-all">
+          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs transition-all"
+          onClick={() => runCode(54)}>
             <Play size={12} /> Run Code
           </button>
         </header>
@@ -87,23 +109,29 @@ useEffect(() => {
         {/* Editor & AI Panel Split */}
         <div className="flex-1 flex overflow-hidden">
           
-          {/* Editor Space */}
-          <div className="flex-1 border-r border-gray-800">
-            <Editor
-              height="100%"
-              defaultLanguage="cpp"
-              theme="vs-dark"
-              value={input}
-              onChange={(value) => setInput(value || "")}
-              options={{
-                fontSize: 14,
-                minimap: { enabled: false },
-                padding: { top: 20 },
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-              }}
-            />
-          </div>
+         {/* Editor & Terminal Space */}
+<div className="flex-1 flex flex-col border-r border-gray-800">
+  
+  <div className="flex-1">
+    <Editor
+      height="100%"
+      defaultLanguage="cpp"
+      theme="vs-dark"
+      value={input}
+      onChange={(value) => setInput(value || "")}
+      options={{
+        fontSize: 14,
+        minimap: { enabled: false },
+        padding: { top: 20 },
+        lineNumbers: 'on',
+        scrollBeyondLastLine: false,
+      }}
+    />
+  </div>
+
+  <TerminalWindow output={output} error={error} />
+
+</div>
 
           {/* AI Panel */}
 <section className="w-[450px] bg-[#0D1117] border-l border-gray-800 flex flex-col">

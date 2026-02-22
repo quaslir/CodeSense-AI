@@ -1,24 +1,20 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express = require("express");
-const GoogleAI = require("@google/generative-ai");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const Groq = require("groq-sdk");
-const debug_1 = require("./debug");
-const explain_1 = require("./explain");
-const optimize_1 = require("./optimize");
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import Groq from "groq-sdk";
+import { DEBUG_PROMPT } from "./debug.js";
+import { EXPLAIN_PROMPT } from "./explain.js";
+import { OPTIMIZE_PROMPT } from "./optimize.js";
+import axios from "axios";
 const app = express();
 dotenv.config();
 app.use(express.json());
 app.use(cors());
 const groq = new Groq.Groq({ apiKey: process.env.GROK_KEY });
-const GeminiLLM = process.env.GEMINI_KEY;
-const gemini = new GoogleAI.GoogleGenerativeAI(GeminiLLM);
+;
 app.post("/analyze", async (req, res) => {
-    console.log("STARTING ANALAZYING....");
     const { input, model } = req.body;
-    const systemPrompt = model == 0 ? explain_1.EXPLAIN_PROMPT : model == 1 ? debug_1.DEBUG_PROMPT : optimize_1.OPTIMIZE_PROMPT;
+    const systemPrompt = model == 0 ? EXPLAIN_PROMPT : model == 1 ? DEBUG_PROMPT : OPTIMIZE_PROMPT;
     if (!input)
         return res.status(400).json({ message: "Message is empty" });
     try {
@@ -46,6 +42,36 @@ app.post("/analyze", async (req, res) => {
     catch (error) {
         console.error("All LLMs are down, error: ", error);
         return res.send("All LLMs are down");
+    }
+});
+;
+app.post("/api/compile", async (req, res) => {
+    const { code, lang } = req.body;
+    if (!code || !lang)
+        return res.status(400);
+    const options = {
+        method: 'POST',
+        url: 'https://judge0-ce.p.rapidapi.com/submissions',
+        data: {
+            source_code: code,
+            language_id: lang
+        },
+        params: {
+            base64_encoded: false,
+            wait: 'true'
+        },
+        headers: {
+            'x-rapidapi-host': 'judge0-ce.p.rapidapi.com',
+            'x-rapidapi-key': '6f0d76c5bbmsh1369f3e130fa632p1b4a78jsn1a5358fe1646',
+            'Content-Type': 'application/json'
+        }
+    };
+    try {
+        const response = await axios.request(options);
+        console.log(response.data);
+    }
+    catch (error) {
+        console.error(error);
     }
 });
 app.listen(3000, () => console.log("Server is working on 3000 port"));
