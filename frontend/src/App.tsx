@@ -15,6 +15,8 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import TerminalWindow from "./Terminal";
 import rehypeHighlight from "rehype-highlight";
+import { availableLanguages } from "./Langs";
+import type { Language } from "./Langs";
 import 'highlight.js/styles/atom-one-dark.css'
 export default function App() {
 const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
@@ -22,6 +24,8 @@ const [response, setResponse] = useState<string>("");
 const [isLoading, setIsLoading] = useState<boolean>(false);
 const [output, setOutput] = useState<string>("");
 const [error, setError] = useState<string>("");
+const [selectedLang, setSelectedLang] = useState<Language>(availableLanguages[0]);
+
 async function send(model:number) {
   setIsLoading(true);
   setResponse("");
@@ -74,21 +78,21 @@ useEffect(() => {
         <button 
           onClick={() => send(0)} 
           disabled={isLoading}
-          className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Explain'"
+          className="p-3 hover:bg-gray-800 rounded-xl cursor-pointer transition-colors title='Explain'"
         >
           <MessageSquareCode size={20} className="text-blue-400" />
         </button>
         <button 
           onClick={() => send(1)} 
           disabled={isLoading}
-          className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Debug'"
+          className="p-3 hover:bg-gray-800 rounded-xl cursor-pointer transition-colors title='Debug'"
         >
           <Bug size={20} className="text-red-400" />
         </button>
         <button 
           onClick={() => send(2)} 
           disabled={isLoading}
-          className="p-3 hover:bg-gray-800 rounded-xl transition-colors title='Optimize'"
+          className="p-3 hover:bg-gray-800 rounded-xl cursor-pointer transition-colors title='Optimize'"
         >
           <Zap size={20} className="text-yellow-400" />
         </button>
@@ -98,26 +102,48 @@ useEffect(() => {
       <main className="flex-1 flex flex-col overflow-hidden">
         
         {/* Top Header */}
-        <header className="h-12 border-b border-gray-800 flex items-center justify-between px-4 bg-[#161B22]">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-gray-500">
-            <Terminal size={14} /> main.cpp
-          </div>
-          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs transition-all"
-          onClick={() => runCode(54)}>
-            <Play size={12} /> Run Code
-          </button>
-        </header>
+        <header className="h-12 border-b border-gray-800 flex items-center justify-between px-4 bg-[#161B22] shrink-0">
+  <div className="flex items-center gap-3">
+    <Terminal size={14} className="text-gray-500" />
+    
+    <div className="relative group">
+      <select 
+        value={selectedLang.name}
+        onChange={(e) => {
+          const lang = availableLanguages.find(l => l.name === e.target.value);
+          if (lang) setSelectedLang(lang);
+        }}
+        className="bg-transparent text-xs font-medium uppercase tracking-widest text-gray-300 outline-none cursor-pointer hover:text-blue-400 transition-colors appearance-none pr-4"
+      >
+        {availableLanguages.map(lang => (
+          <option key={lang.id} value={lang.name} className="bg-[#161B22] text-gray-300">
+            {lang.name}
+          </option>
+        ))}
+      </select>
+
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+        <ChevronRight size={10} className="rotate-90 text-gray-600" />
+      </div>
+    </div>
+  </div>
+
+  <button 
+    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs cursor-pointer transition-all active:scale-95"
+    onClick={() => runCode(selectedLang.id)} 
+  >
+    <Play size={12} /> Run Code
+  </button>
+</header>
 
         {/* Editor & AI Panel Split */}
         <div className="flex-1 flex overflow-hidden">
-          
-         {/* Editor & Terminal Space */}
 <div className="flex-1 flex flex-col border-r border-gray-800">
   
   <div className="flex-1">
     <Editor
       height="100%"
-      defaultLanguage="cpp"
+      language={selectedLang.name}
       theme="vs-dark"
       value={input}
       onChange={(value) => setInput(value || "")}
@@ -134,6 +160,7 @@ useEffect(() => {
   <TerminalWindow output={output} error={error} />
 
 </div>
+
 
           <section className="w-[450px] bg-[#0D1117] border-l border-gray-800 flex flex-col">
   <div className="p-3 border-b border-gray-800 bg-[#161B22] flex items-center gap-2 text-sm font-bold">
@@ -181,8 +208,8 @@ useEffect(() => {
     )}
   </div>
 </section>
-
         </div>
+    
       </main>
     </div>
   );

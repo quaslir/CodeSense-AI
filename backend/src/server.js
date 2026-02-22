@@ -30,7 +30,7 @@ app.post("/analyze", async (req, res) => {
                 }
             ],
             "model": "llama-3.1-8b-instant",
-            "temperature": 1,
+            "temperature": 0.2,
             "max_completion_tokens": 1024,
             "top_p": 1,
             "stream": false,
