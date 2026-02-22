@@ -6,6 +6,7 @@ import Groq from "groq-sdk"
 import { DEBUG_PROMPT } from "./debug.js";
 import { EXPLAIN_PROMPT } from "./explain.js";
 import { OPTIMIZE_PROMPT } from "./optimize.js";
+import { AUTOCOMPPLETION_PROMPT } from "./autocompletionPrompt.js"
 import axios from "axios"
 import { error } from "node:console"
 const app = express();
@@ -95,6 +96,45 @@ try {
 } catch(error) {
     console.error(error);
 }
+});
+
+interface AutocompleteTypes {
+    code : string,
+    lang: number,
+    model:string
+};
+
+app.post("/api/autocomplete", async(req, res) => {
+    const {code, lang, model}:AutocompleteTypes = req.body;
+    console.log(code);
+    if(!code) return res.status(400);
+   try {
+            const chatCompletion = await groq.chat.completions.create({
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": AUTOCOMPPLETION_PROMPT
+                    },
+                    {
+                    "role" : "user",
+                    content: `My cod is \n\n${code}`
+                    }
+                ],
+                "model": "llama-3.1-8b-instant",
+                "temperature": 0.0,
+                "max_completion_tokens": 64,
+                "top_p": 1,
+                "stream": false,
+                "stop": ["\n\n", "```"]
+            });
+
+            const reply = chatCompletion.choices[0]?.message?.content || "";
+            return res.json({suggestion: reply});
+            
+        } catch (error) {
+            console.error("Groq API Error:", error);
+        return res.status(500).json({ suggestion: "", error: "LLM unreachable" });
+        }
 });
 
 

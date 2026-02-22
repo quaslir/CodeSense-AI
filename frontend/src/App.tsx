@@ -6,16 +6,19 @@ import {
 
 } from 'lucide-react';
 import axios from 'axios';
-
+import * as monaco from 'monaco-editor';
 import TerminalWindow from "./Terminal";
 import { availableLanguages } from "./Langs";
 import type { Language } from "./Langs";
+import { useMonaco } from "@monaco-editor/react";
 import 'highlight.js/styles/atom-one-dark.css'
 import Header from "./Header";
 import Content from "./Content";
 import Slidebar from "./Slidebar";
 import Settings from "./Settings";
+let debounceTimer: number | undefined;
 export default function App() {
+const monaco = useMonaco();
 const [input, setInput] = useState<string>(localStorage.getItem("saved_code") || "");
 const [response, setResponse] = useState<string>("");
 const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -84,6 +87,85 @@ const updateSettings = (newSettings:Settings) => {
     return updated;
   });
 }
+
+
+
+
+
+const delay = (ms: number) => new Promise(res => {
+clearTimeout(debounceTimer);
+debounceTimer = setTimeout(res, ms);
+});
+
+
+
+useEffect(() => {
+  if(!monaco) return;
+  const provider = monaco.languages.registerInlineCompletionsProvider(selectedLang.name, {
+    provideInlineCompletions: async(
+      model: monaco.editor.ITextModel, 
+      position: monaco.Position,       
+      context: any,                          
+      token: monaco.CancellationToken) => {
+      if(!settings.autocomplete) return {items: []};
+
+      await delay(500);
+
+      if(token.isCancellationRequested) return {items: []};
+
+      const startLine = Math.max(1, position.lineNumber - 50);
+
+      const codeContext = model.getValueInRange({
+        startLineNumber: startLine,
+        startColumn: 1,
+        endLineNumber: position.lineNumber,
+        endColumn: position.column
+      });
+
+
+      try {
+        const res = await axios.post("http://localhost:3000/api/autocomplete", {
+          code: codeContext,
+          lang:selectedLang.name,
+          model:settings.model
+        });
+        const suggestion = res.data.suggestion;
+
+        const wordInfo = model.getWordUntilPosition(position);
+
+        const startColumn = wordInfo ? wordInfo.startColumn : position.column;
+
+         const endColumn = position.column;
+
+        return {
+          items: [
+            {
+              insertText: suggestion,
+              range: {
+                startLineNumber:position.lineNumber,
+                startColumn:startColumn,
+                endLineNumber:position.lineNumber,
+                endColumn:endColumn
+              },
+            },
+          ],
+        };
+      } catch(error) {
+        console.error("Autocomplete error: ", error);
+        return {items: []};
+
+      }
+    },
+    freeInlineCompletions: () => {} ,
+    disposeInlineCompletions:() => {}
+  } as any
+);
+
+  return () => provider.dispose();
+}, [selectedLang, settings, monaco]);
+
+
+
  return (
     <div className="flex h-screen w-full bg-[#0D1117] text-gray-300 font-sans">
       
